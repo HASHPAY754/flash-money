@@ -1,35 +1,28 @@
 const express = require('express');
-const cors = require('cors'); // <-- 1. ADDED THIS LINE HERE
+const cors = require('cors');
 const app = express();
 
-app.use(cors()); // <-- 2. ADDED THIS LINE HERE (Must be above your routes!)
+app.use(cors());
 app.use(express.json());
 
-// 1. This is our hardcoded mock API Key for testing.
-// In production, these would be unique per merchant and stored in a database.
 const VALID_API_KEY = "rzp_test_secret_12345";
 
-// 2. Authentication Middleware
-// This function checks every incoming request for a valid API Key
+// Authentication Middleware
 const authenticateMerchant = (req, res, next) => {
     const authHeader = req.headers['authorization'];
-
-    // Real gateways expect keys in the format: "Bearer your_api_key"
     if (!authHeader || authHeader !== `Bearer ${VALID_API_KEY}`) {
         return res.status(401).json({
             status: "error",
-            message: "Unauthorized: Invalid or missing API Key in Authorization header"
+            message: "Unauthorized: Invalid or missing API Key"
         });
     }
-
-    // If the key matches, move on to the actual endpoint code
     next();
 };
 
 let ordersDb = [];
 
 /**
- * STEP 1 ENDPOINT: Create an Order (Protected by authenticateMerchant)
+ * STEP 1: Create an Order
  */
 app.post('/api/v1/orders', authenticateMerchant, (req, res) => {
     const { amount, currency, merchant_id } = req.body;
@@ -51,51 +44,56 @@ app.post('/api/v1/orders', authenticateMerchant, (req, res) => {
     };
 
     ordersDb.push(newOrder);
-
-    return res.status(201).json({
-        status: "success",
-        data: newOrder
-    });
+    return res.status(201).json({ status: "success", data: newOrder });
 });
 
 /**
- * STEP 2 ENDPOINT: Process/Capture Payment (Protected by authenticateMerchant)
+ * STEP 2: Capture Payment (Supports CARD and UPI)
  */
 app.post('/api/v1/payments/capture', authenticateMerchant, (req, res) => {
-    const { order_id, card_number, cvc, expiry } = req.body;
+    const { order_id, method, card_number, cvc, expiry, upi_id } = req.body;
 
-    if (!order_id || !card_number || !cvc || !expiry) {
-        return res.status(400).json({
-            status: "error",
-            message: "Missing payment details"
-        });
+    if (!order_id || !method) {
+        return res.status(400).json({ status: "error", message: "Missing order_id or payment method" });
     }
 
     const currentOrder = ordersDb.find(o => o.order_id === order_id);
-
     if (!currentOrder) {
-        return res.status(404).json({
-            status: "error",
-            message: "Order not found"
-        });
+        return res.status(404).json({ status: "error", message: "Order not found" });
     }
 
     if (currentOrder.status === 'paid') {
-        return res.status(400).json({
-            status: "error",
-            message: "This order has already been paid successfully"
-        });
+        return res.status(400).json({ status: "error", message: "This order has already been paid" });
     }
 
-    if (card_number.endsWith('0000')) {
-        currentOrder.status = 'failed';
-        return res.status(402).json({
-            status: "failed",
-            message: "Payment declined by the issuing bank"
-        });
+    // 1. Logic for Card Payments
+    if (method === 'card') {
+        if (!card_number || !cvc || !expiry) {
+            return res.status(400).json({ status: "error", message: "Missing card details for card payment" });
+        }
+        if (card_number.endsWith('0000')) {
+            currentOrder.status = 'failed';
+            return res.status(402).json({ status: "failed", message: "Card declined by issuing bank" });
+        }
+    } 
+    // 2. Logic for UPI Payments (GPay, PhonePe, etc.)
+    else if (method === 'upi') {
+        if (!upi_id) {
+            return res.status(400).json({ status: "error", message: "Missing UPI ID for mobile app payment" });
+        }
+        // Simulate a fake blocked account scenario if they type "fail@upi"
+        if (upi_id.includes('fail')) {
+            currentOrder.status = 'failed';
+            return res.status(402).json({ status: "failed", message: "UPI transaction timed out or rejected by user" });
+        }
+    } else {
+        return res.status(400).json({ status: "error", message: "Unsupported payment method requested" });
     }
 
+    // Save method used to the order tracking object
     currentOrder.status = 'paid';
+    currentOrder.payment_method = method;
+    currentOrder.paid_via = method === 'upi' ? upi_id : `XXXX-XXXX-XXXX-${card_number.slice(-4)}`;
 
     return res.status(200).json({
         status: "success",
@@ -107,5 +105,5 @@ app.post('/api/v1/payments/capture', authenticateMerchant, (req, res) => {
 
 const PORT = 3000;
 app.listen(PORT, () => {
-    console.log(`🚀 Secure Payment Gateway API live at http://localhost:${PORT}`);
+    console.log(`🚀 Multi-Method Payment Gateway live at http://localhost:${PORT}`);
 });

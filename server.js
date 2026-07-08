@@ -1,6 +1,8 @@
 const express = require('express');
+const cors = require('cors'); // <-- 1. ADDED THIS LINE HERE
 const app = express();
 
+app.use(cors()); // <-- 2. ADDED THIS LINE HERE (Must be above your routes!)
 app.use(express.json());
 
 // 1. This is our hardcoded mock API Key for testing.

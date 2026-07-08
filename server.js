@@ -7,7 +7,7 @@ app.use(cors());
 app.use(express.json());
 
 const VALID_API_KEY = "rzp_test_secret_12345";
-const MONGO_URI = "mongodb+srv://hashim225063_db_user:RHTUZaKiMe8wbzat@flashmoneycluster.cusezii.mongodb.net/flash_money_prod?retryWrites=true&w=majority&appName=flashmoneycluster";
+const MONGO_URI = "mongodb+srv://hashim225063_db_user:RHTUZaKiMe8wbzat@flashmoneycluster.cusezii.mongodb.net/flash_money_prod?retryWrites=true&w=majority&ssl=true";
 
 // Connect to MongoDB Atlas Cloud
 mongoose.connect(MONGO_URI)

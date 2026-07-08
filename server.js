@@ -102,7 +102,15 @@ app.post('/api/v1/payments/capture', authenticateMerchant, (req, res) => {
         order_details: currentOrder
     });
 });
-
+/**
+ * DEBUG ENDPOINT: View all orders currently in memory
+ */
+app.get('/api/v1/orders', (req, res) => {
+    return res.status(200).json({
+        total_orders: ordersDb.length,
+        orders: ordersDb
+    });
+});
 const PORT = 3000;
 app.listen(PORT, () => {
     console.log(`🚀 Multi-Method Payment Gateway live at http://localhost:${PORT}`);

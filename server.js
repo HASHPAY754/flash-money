@@ -66,7 +66,7 @@ app.post('/api/v1/payments/capture', authenticateMerchant, (req, res) => {
         return res.status(400).json({ status: "error", message: "This order has already been paid" });
     }
 
-    // 1. Logic for Card Payments
+    // Logic for Card Payments
     if (method === 'card') {
         if (!card_number || !cvc || !expiry) {
             return res.status(400).json({ status: "error", message: "Missing card details for card payment" });
@@ -76,12 +76,11 @@ app.post('/api/v1/payments/capture', authenticateMerchant, (req, res) => {
             return res.status(402).json({ status: "failed", message: "Card declined by issuing bank" });
         }
     } 
-    // 2. Logic for UPI Payments (GPay, PhonePe, etc.)
+    // Logic for UPI Payments (GPay, PhonePe, etc.)
     else if (method === 'upi') {
         if (!upi_id) {
             return res.status(400).json({ status: "error", message: "Missing UPI ID for mobile app payment" });
         }
-        // Simulate a fake blocked account scenario if they type "fail@upi"
         if (upi_id.includes('fail')) {
             currentOrder.status = 'failed';
             return res.status(402).json({ status: "failed", message: "UPI transaction timed out or rejected by user" });
@@ -90,7 +89,6 @@ app.post('/api/v1/payments/capture', authenticateMerchant, (req, res) => {
         return res.status(400).json({ status: "error", message: "Unsupported payment method requested" });
     }
 
-    // Save method used to the order tracking object
     currentOrder.status = 'paid';
     currentOrder.payment_method = method;
     currentOrder.paid_via = method === 'upi' ? upi_id : `XXXX-XXXX-XXXX-${card_number.slice(-4)}`;
@@ -102,8 +100,9 @@ app.post('/api/v1/payments/capture', authenticateMerchant, (req, res) => {
         order_details: currentOrder
     });
 });
+
 /**
- * DEBUG ENDPOINT: View all orders currently in memory
+ * NEW DEBUG ENDPOINT: View all orders captured in memory
  */
 app.get('/api/v1/orders', (req, res) => {
     return res.status(200).json({
@@ -111,6 +110,7 @@ app.get('/api/v1/orders', (req, res) => {
         orders: ordersDb
     });
 });
+
 const PORT = 3000;
 app.listen(PORT, () => {
     console.log(`🚀 Multi-Method Payment Gateway live at http://localhost:${PORT}`);

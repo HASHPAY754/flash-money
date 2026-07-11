@@ -7,6 +7,19 @@ app.use(cors());
 app.use(express.json());
 
 const VALID_API_KEY = "rzp_test_secret_12345";
+
+// Safely pull the database link from your secure environment settings
+const MONGO_URI = process.env.MONGO_URI; 
+
+if (!MONGO_URI) {
+    console.error("❌ CRITICAL: MONGO_URI environment variable is missing!");
+    process.exit(1);
+}
+
+// Connect to MongoDB Atlas Cloud
+mongoose.connect(MONGO_URI)
+    .then(() => console.log("🔌 Connected permanently to MongoDB Atlas!"))
+    .catch(err => console.error("❌ Database connection error:", err));
 mongodb+srv://hashim225063_db_user:FlashMoneyPass123@flashmoneycluster.cusezii.mongodb.net/?appName=flashmoneycluster &ssl=true;
 // Connect to MongoDB Atlas Cloud
 mongoose.connect(MONGO_URI)
